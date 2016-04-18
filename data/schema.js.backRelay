@@ -1,0 +1,296 @@
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
+
+import {
+  GraphQLBoolean,
+  GraphQLFloat,
+  GraphQLID,
+  GraphQLInt,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLObjectType,
+  GraphQLSchema,
+  GraphQLString,
+} from 'graphql';
+
+import {
+  connectionArgs,
+  connectionDefinitions,
+  connectionFromArray,
+  fromGlobalId,
+  globalIdField,
+  mutationWithClientMutationId,
+  nodeDefinitions,
+} from 'graphql-relay';
+
+import {
+  // Import methods that your schema can use to interact with your database
+  Sondage,
+  Vote,
+  getVote,
+  getSondage,
+} from './database';
+
+import {findIdFromUrl, People, peopleDataFetcher, getPeoples, Film, filmDataFetcher} from './api';
+
+
+/**
+ * We get the node interface and field from the Relay library.
+ *
+ * The first method defines the way we resolve an ID to its object.
+ * The second defines the way we resolve an object to its GraphQL type.
+ */
+var {nodeInterface, nodeField} = nodeDefinitions(
+  (globalId) => {
+    var {type, id} = fromGlobalId(globalId);
+    if (type === 'People') {
+      return peopleDataFetcher(id);
+    } else if (type === 'Peoples') {
+      return getPeoples();
+    } else if (type === 'Film') {
+      return filmDataFetcher(id);
+    } else if (type === 'Sondage') {
+      return getSondage(id);
+    } else if (type === 'Vote') {
+      return getVote(id);
+    } else {
+      return null;
+    }
+  },
+  (obj) => {
+    if (obj instanceof People) {
+      return peopleType;
+    } else if (obj instanceof Film) {
+      return filmType;
+    } else if (obj instanceof Sondage) {
+      return filmType;
+    } else if (obj instanceof Vote) {
+      return filmType;
+    } else {
+      return null;
+    }
+  }
+);
+
+const peopleType = new GraphQLObjectType({
+  name: 'People',
+  description: 'star wars character',
+  fields: () => ({
+    id: globalIdField('People'),
+    swapiId: {
+      type: GraphQLInt,
+      description: 'star wars api id'
+    },
+    name: {
+      type: GraphQLString,
+      description: 'name of the character'
+    },
+    gender: {
+      type: GraphQLString,
+      description: 'gender of the character'
+    },
+    films: {
+      type: filmConnection,
+      description: 'A star wars character movies in wich he appear',
+      args: connectionArgs,
+      resolve: (parent, args) => {
+        return connectionFromArray(parent.films, args)
+      }
+    },
+  }),
+  interfaces: [nodeInterface]
+});
+
+const filmType = new GraphQLObjectType({
+  name: 'Film',
+  description: 'star wars movie',
+  fields: () => ({
+    id: globalIdField('Film'),
+    swapiId: {
+      type: GraphQLInt,
+      description: 'star wars api id'
+    },
+    title: {
+      type: GraphQLString,
+      description: ('title of the movie')
+    },
+    characters: {
+      type: peopleConnection,
+      description: 'characters appearing in this movie',
+      args: connectionArgs,
+      resolve: (parent, args) => {
+        return connectionFromArray(parent.characters, args);
+      }
+    }
+  }),
+  interfaces: [nodeInterface]
+});
+
+const sondageType = new GraphQLObjectType({
+  name: 'Sondage',
+  description: 'Un sondage sur un type d\'élément composant la lore de SW',
+  fields: () => ({
+    id: globalIdField('Sondage'),
+    titre: { type: new GraphQLNonNull(GraphQLString) },
+    nodeType: { type: new GraphQLNonNull(GraphQLString) },
+    votes: {
+      type: voteConnection,
+      description: 'liste de vote attaché a ce sondage',
+      args: connectionArgs,
+      resolve: (parent, args) => {
+        return connectionFromArray(parent.votes, args);
+      }
+    }
+  }),
+  interface: [nodeInterface]
+});
+
+const voteType = new GraphQLObjectType({
+  name: 'Vote',
+  description: 'Decris un vote pour un élément',
+  fields: () => ({
+    id: globalIdField('Vote'),
+    node: {
+      type: new GraphQLNonNull(peopleType),
+      resolve: (parent) => {
+        return peopleDataFetcher(parent.node);
+      }
+    },
+    count: { type: new GraphQLNonNull(GraphQLInt) },
+  }),
+  interface: [nodeInterface]
+});
+
+
+const peoplesType = new GraphQLObjectType({
+  name: 'Peoples',
+  description: 'wrap a list of people',
+  fields: () => ({
+    id: globalIdField('Peoples'),
+    peoples: {
+      type: peopleConnection,
+      description: 'list of star wars character',
+      args: connectionArgs,
+      resolve: (parent, args) => {
+        return connectionFromArray([1, 2, 3, 4, 5, 6, 7, 8, 9], args)
+      }
+    }
+  }),
+  interfaces: [nodeInterface]
+});
+
+/**
+ * Define your own connection types here
+ */
+const {connectionType: peopleConnection} = connectionDefinitions({
+  name: 'People',
+  nodeType: peopleType,
+  resolveNode: edge => peopleDataFetcher(edge.node)
+});
+const {connectionType: filmConnection} = connectionDefinitions({
+  name: 'Film',
+  nodeType: filmType,
+  resolveNode: edge => filmDataFetcher(edge.node)
+});
+
+const {connectionType: voteConnection} = connectionDefinitions({
+  name: 'Vote',
+  nodeType: voteType,
+  resolveNode: edge => getVote(edge.node)
+});
+
+/**
+ * This is the type that will be the root of our query,
+ * and the entry point into our schema.
+ */
+var queryType = new GraphQLObjectType({
+  name: 'Query',
+  fields: () => ({
+    node: nodeField,
+    hello: {
+      type: GraphQLString,
+      resolve: () => {
+        return 'World!';
+      }
+    },
+    people: {
+      type: peopleType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve: (parent, {id}) => {
+        return peopleDataFetcher(id);
+      }
+    },
+    peoples: {
+      type: peoplesType,
+      resolve: () => {
+        return getPeoples();
+      }
+    },
+    film: {
+      type: filmType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve: (parent, {id}) => {
+        return filmDataFetcher(id);
+      }
+    },
+    sondage: {
+      type: sondageType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve: (parent, {id}) => {
+        return getSondage(id);
+      }
+    }
+  }),
+});
+
+const CreateIncrementVoteMutation = mutationWithClientMutationId({
+  name: 'IncrementVote',
+  inputFields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+  },
+  outputFields: {
+    vote: {
+      type: new GraphQLNonNull(voteType),
+      resolve: ({id}) => getVote(id)
+    }
+  },
+  mutateAndGetPayload: ({id}) => {
+    const localTodoId = fromGlobalId(id).id;
+    const vote = getVote(localTodoId);
+    vote.count += 1;
+    return vote;
+  }
+})
+
+/**
+ * This is the type that will be the root of our mutations,
+ * and the entry point into performing writes in our schema.
+ */
+const mutationType = new GraphQLObjectType({
+  name: 'Mutation',
+  fields: () => ({
+    incrementVote: CreateIncrementVoteMutation
+  })
+});
+
+/**
+ * Finally, we construct our schema (whose starting query type is the query
+ * type we defined above) and export it.
+ */
+export var Schema = new GraphQLSchema({
+  query: queryType,
+  // Uncomment the following after adding some mutation fields:
+  mutation: mutationType
+});
