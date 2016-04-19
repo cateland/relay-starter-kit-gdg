@@ -1,5 +1,4 @@
 import axios from 'axios';
-import _ from 'lodash';
 
 export const findIdFromUrl = url => {
     return /([0-9]+)\/$/.exec(url)[1];
@@ -25,12 +24,12 @@ export function Film(data){
     });
 }
 
-export const peopleDataFetcher = _.memoize(id => {
+export const peopleDataFetcher = id => {
     return axios.get(`http://swapi.co/api/people/${id}/`)
         .then(response => {
             return new People(response.data)
         })
-});
+};
 
 export const getPeoples = () => {
     return axios.get('http://swapi.co/api/people/')
@@ -41,9 +40,9 @@ export const getPeoples = () => {
         });
 }
 
-export const filmDataFetcher = _.memoize(id => {
+export const filmDataFetcher = id => {
     return axios.get(`http://swapi.co/api/films/${id}/`)
         .then(response => {
             return new Film(response.data)
         })
-});
+};

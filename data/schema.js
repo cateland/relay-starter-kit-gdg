@@ -25,19 +25,20 @@ import {
   Vote,
   getVote,
   getSondage,
-  incrementVote,
-  addVote,
-  removeVote
 } from './database';
 
-import {findIdFromUrl, People, peopleDataFetcher, Film, filmDataFetcher} from './api';
+import {findIdFromUrl, People, peopleDataFetcher, getPeoples, Film, filmDataFetcher} from './api';
 
 const peopleType = new GraphQLObjectType({
   name: 'People',
   description: 'star wars character',
   fields: () => ({
     id: {
-      type: new GraphQLNonNull(GraphQLInt)
+      type: new GraphQLNonNull(GraphQLInt),
+      resolve: (parent) => {
+        console.info('parent', parent);
+        return findIdFromUrl(parent.url);
+      }
     },
     swapiId: {
       type: GraphQLInt,
@@ -50,61 +51,7 @@ const peopleType = new GraphQLObjectType({
     gender: {
       type: GraphQLString,
       description: 'gender of the character'
-    },
-    films: {
-      type: new GraphQLList(filmType),
-      resolve: parent => {
-        return parent.films.map((id) => {
-          return filmDataFetcher(id)
-        })
-      }
-    },
-  })
-});
-
-const filmType = new GraphQLObjectType({
-  name: 'Film',
-  fields: () => ({
-    id: { type: new GraphQLNonNull(GraphQLInt) },
-    title: { type: GraphQLString },
-    characters: {
-      type: new GraphQLList(peopleType),
-      resolve: parent => {
-        return parent.characters.map((id) => {
-          return peopleDataFetcher(id);
-        })
-      }
     }
-  })
-});
-
-const sondageType = new GraphQLObjectType({
-    name: 'Sondage',
-    fields: () => ({
-        id: { type: new GraphQLNonNull(GraphQLInt) },
-        titre: { type: GraphQLString },
-        votes: {
-            type: new GraphQLList(voteType),
-            resolve: parent => {
-                return parent.votes.map(element => {
-                   return getVote(element); 
-                });
-            }
-        }
-    })
-});
-
-const voteType = new GraphQLObjectType({
-  name: 'Vote',
-  fields: () => ({
-    id: { type: new GraphQLNonNull(GraphQLInt) },
-    people: {
-      type: peopleType,
-      resolve: parent => {
-        return peopleDataFetcher(parent.id);
-      }
-    },
-    count: { type: GraphQLInt }
   })
 });
 
@@ -126,80 +73,17 @@ var queryType = new GraphQLObjectType({
       resolve: (parent, {id}) => {
         return peopleDataFetcher(id);
       }
-    },
-    film: {
-      type: filmType,
-      description: 'can retrieve a movie by its id',
-      args: {id: {type: new GraphQLNonNull(GraphQLInt)}},
-      resolve: (parent, {id}) => {
-        return filmDataFetcher(id);
-      }
-    },
-    sondage: {
-      type: sondageType,
-      description: 'a pool about your favorites sw characters',
-      args: {id: {type: new GraphQLNonNull(GraphQLString)}},
-      resolve: (parent, {id}) => {
-        return getSondage(id);
-      }
     }
   }),
 });
 
 
-const mutationType = new GraphQLObjectType({
+/** /const mutationType = new GraphQLObjectType({
   name: 'Mutation',
-  fields: {
-    incrementVote: {
-      type: voteType,
-      args: {
-        id: {
-          name: 'id',
-          type: new GraphQLNonNull(GraphQLString)
-        }
-      },
-      resolve: (parent, {id}) => {
-        return incrementVote(id);
-      }
-    },
-    addVote: {
-      type: voteType,
-      args: {
-        id: {
-          name: 'id',
-          type: new GraphQLNonNull(GraphQLString)
-        },
-        sondageId: {
-          name: 'sondageId',
-          type: new GraphQLNonNull(GraphQLString)
-        },
-        peopleId: {
-          name: 'peopleId',
-          type: new GraphQLNonNull(GraphQLInt)
-        }
-      },
-      resolve: (parent, {sondageId, id, peopleId}) => {
-        return addVote(sondageId, id, peopleId);
-      }
-    },
-    removeVote: {
-      type: GraphQLString,
-      args: {
-        id: {
-          name: 'id',
-          type: new GraphQLNonNull(GraphQLString)
-        },
-        sondageId: {
-          name: 'sondageId',
-          type: new GraphQLNonNull(GraphQLString)
-        },
-      },
-      resolve: (parent, {sondageId, id}) => {
-        return removeVote(sondageId, id);
-      }
-    }
-  }
-});
+  fields: () => ({
+    incrementVote: CreateIncrementVoteMutation
+  })
+}); */
 
 /**
  * Finally, we construct our schema (whose starting query type is the query
@@ -208,5 +92,5 @@ const mutationType = new GraphQLObjectType({
 export var Schema = new GraphQLSchema({
   query: queryType,
   // Uncomment the following after adding some mutation fields:
-  mutation: mutationType
+  //mutation: mutationType
 });
