@@ -1,0 +1,10 @@
+type People {
+  id: Int!
+  swapiId: Int
+  name: String
+  gender: String
+}
+
+type Query {
+  people(id: Int!): People
+}

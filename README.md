@@ -1,34 +1,6 @@
-# Relay Starter Kit
-
-This kit includes an app server, a GraphQL server, and a transpiler that you can use to get started building an app with Relay. For a walkthrough, see the [Relay tutorial](https://facebook.github.io/relay/docs/tutorial.html).
-
-## Installation
-
-```
-npm install
-```
-
-## Running
-
-Start a local server:
-
-```
-npm start
-```
-
-## Developing
-
-Any changes you make to files in the `js/` directory will cause the server to
-automatically rebuild the app and refresh your browser.
-
-If at any time you make changes to `data/schema.js`, stop the server,
-regenerate `data/schema.json`, and restart the server:
-
-```
-npm run update-schema
-npm start
-```
-
-## License
-
-Relay Starter Kit is [BSD licensed](./LICENSE). We also provide an additional [patent grant](./PATENTS).
+Example 1 : Mapping d'un element de la swapi
+Example 2 : Mapping de deux element de la swapi et liens entre ceux-ci
+Example 3 : Démonstration de l'utilisation du cache
+Example 4 (coming soon): Ajout d'une seconde source de donnée (base locale)
+Example 5 (coming soon): Utilisation des mutations.
+Example Relay (coming soon): Examples d'utilisation avec relay.

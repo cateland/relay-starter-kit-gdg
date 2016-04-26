@@ -1,0 +1,17 @@
+type Film {
+  id: Int!
+  title: String
+}
+
+type People {
+  id: Int!
+  swapiId: Int
+  name: String
+  gender: String
+  films: [Film]
+}
+
+type Query {
+  people(id: Int!): People
+  film(id: Int!): Film
+}

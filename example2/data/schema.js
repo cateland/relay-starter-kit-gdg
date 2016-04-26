@@ -19,14 +19,6 @@ import {
   GraphQLString,
 } from 'graphql';
 
-import {
-  // Import methods that your schema can use to interact with your database
-  Sondage,
-  Vote,
-  getVote,
-  getSondage,
-} from './database';
-
 import {findIdFromUrl, People, peopleDataFetcher, getPeoples, Film, filmDataFetcher} from './api';
 
 const peopleType = new GraphQLObjectType({
@@ -34,11 +26,7 @@ const peopleType = new GraphQLObjectType({
   description: 'star wars character',
   fields: () => ({
     id: {
-      type: new GraphQLNonNull(GraphQLInt),
-      resolve: (parent) => {
-        console.info('parent', parent);
-        return findIdFromUrl(parent.url);
-      }
+      type: new GraphQLNonNull(GraphQLInt)
     },
     swapiId: {
       type: GraphQLInt,
@@ -51,7 +39,24 @@ const peopleType = new GraphQLObjectType({
     gender: {
       type: GraphQLString,
       description: 'gender of the character'
-    }
+    },
+    films: {
+      type: new GraphQLList(filmType),
+      resolve: parent => {
+        return parent.films.map((id) => {
+          return filmDataFetcher(id)
+        })
+      }
+    },
+  })
+});
+
+const filmType = new GraphQLObjectType({
+  name: 'Film',
+  fields: () => ({
+    id: { type: new GraphQLNonNull(GraphQLInt) },
+    title: { type: GraphQLString }
+    /** CREER LE LIEN ENTRE FILM et CHARACTER */
   })
 });
 
@@ -72,6 +77,14 @@ var queryType = new GraphQLObjectType({
       },
       resolve: (parent, {id}) => {
         return peopleDataFetcher(id);
+      }
+    },
+    film: {
+      type: filmType,
+      description: 'can retrieve a movie by its id',
+      args: {id: {type: new GraphQLNonNull(GraphQLInt)}},
+      resolve: (parent, {id}) => {
+        return filmDataFetcher(id);
       }
     }
   }),
